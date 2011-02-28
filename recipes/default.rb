@@ -41,10 +41,11 @@ db_host       = node[:gitorious][:db][:host]
 db_database   = node[:gitorious][:db][:database]
 db_username   = node[:gitorious][:db][:user]
 db_password   = node[:gitorious][:db][:password]
-g_ruby_bin    = "#{node[:rvm][:root_path]}/bin/gitorious_ruby"
-g_rake_bin    = "#{node[:rvm][:root_path]}/bin/gitorious_rake"
-g_bundle_bin  = "#{node[:rvm][:root_path]}/bin/gitorious_bundle"
-g_gem_bin     = "#{node[:rvm][:root_path]}/bin/gitorious_gem"
+rvm_bin_path  = "/usr/local/bin"
+g_ruby_bin    = "#{rvm_bin_path}/gitorious_ruby"
+g_rake_bin    = "#{rvm_bin_path}/gitorious_rake"
+g_bundle_bin  = "#{rvm_bin_path}/gitorious_bundle"
+g_gem_bin     = "#{rvm_bin_path}/gitorious_gem"
 
 node[:webapp][:apps] << {
   :id               => "gitorious",
@@ -447,6 +448,11 @@ end
 service "git-daemon" do
   action      [ :enable, :start ]
   supports    :restart => true, :reload => false, :status => false
+end
+
+service "stompserver" do
+  action      [ :start ]
+  supports    :restart => true, :reload => true
 end
 
 service "git-poller" do
