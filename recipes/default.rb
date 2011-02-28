@@ -73,7 +73,17 @@ Gem.clear_paths
 require 'mysql'
 
 include_recipe "imagemagick"
-include_recipe "stompserver"
+include_recipe "activemq"
+
+configure_activemq = lambda do
+  activemq_xml_fn = Dir['/opt/apache-activemq*/conf/activemq.xml'][0]
+  unless (activemq_xml = IO.read(activemq_xml_fn)) =~ /stomp/
+    # uses Stomp connector (port 61613) used by Gitorious instead of default openwire (61616)
+    activemq_xml.sub!(/^(\s*)(.*openwire.*61616.*)$/, "\\1<!-- \\2 -->\n\\1" + %q{<transportConnector name="stomp" uri="stomp://localhost:61613"/>})
+    file(activemq_xml_fn) { content activemq_xml }
+  end
+end
+ruby_block("Configure ActiveMQ Stomp Server") { block { configure_activemq.call } }
 
 package "sphinxsearch"
 package "memcached"
@@ -374,10 +384,7 @@ execute "migrate_gitorious_database" do
   cwd         current_path
   user        app_user
   group       app_user
-  command     <<-CMD
-    #{g_rake_bin} RAILS_ENV=#{rails_env} db:create && \
-    #{g_rake_bin} RAILS_ENV=#{rails_env} db:migrate
-  CMD
+  command     "#{g_rake_bin} RAILS_ENV=#{rails_env} db:reset"
   notifies    :run, "execute[restart_gitorious_webapp]"
   not_if do
     m = Mysql.new(db_host, db_username, db_password)
@@ -448,11 +455,6 @@ end
 service "git-daemon" do
   action      [ :enable, :start ]
   supports    :restart => true, :reload => false, :status => false
-end
-
-service "stompserver" do
-  action      [ :start ]
-  supports    :restart => true, :reload => true
 end
 
 service "git-poller" do
