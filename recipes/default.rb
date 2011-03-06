@@ -85,6 +85,7 @@ configure_activemq = lambda do
 end
 ruby_block("Configure ActiveMQ Stomp Server") { block { configure_activemq.call } }
 
+package "ssh"
 package "sphinxsearch"
 package "memcached"
 package "apg"
