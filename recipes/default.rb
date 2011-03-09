@@ -224,6 +224,19 @@ rvm_shell "set_rubygems_version" do
   code        %{gem --version | grep 1.5.2 || rvm rubygems 1.5.2}
 end
 
+%w{ post-receive pre-receive }.each do |hook|
+  execute "fix_#{hook}_hooks_shebangs" do
+    cwd         ::File.join(current_path, "data", "hooks")
+    user        app_user
+    group       app_user
+    command     %{sed -e 's|^#!/.*$|#!#{g_ruby_bin}|' -i #{hook}}
+    not_if      <<-NOTIF
+      grep -q "^#!#{g_ruby_bin}$" \
+        #{::File.join(current_path, "data", "hooks", hook)}
+    NOTIF
+  end
+end
+
 execute "gitorious_bundle" do
   cwd         current_path
   user        "root"
