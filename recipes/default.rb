@@ -41,13 +41,14 @@ db_host       = node[:gitorious][:db][:host]
 db_database   = node[:gitorious][:db][:database]
 db_username   = node[:gitorious][:db][:user]
 db_password   = node[:gitorious][:db][:password]
-rvm_bin_path  = "/usr/local/bin"
-g_ruby_bin    = "#{rvm_bin_path}/gitorious_ruby"
-g_rake_bin    = "#{rvm_bin_path}/gitorious_rake"
-g_bundle_bin  = "#{rvm_bin_path}/gitorious_bundle"
-g_gem_bin     = "#{rvm_bin_path}/gitorious_gem"
+bin_path      = ::File.dirname(node[:rvm][:root_path])
+g_ruby_bin    = "#{bin_path}/bin/gitorious_ruby"
+g_rake_bin    = "#{bin_path}/bin/gitorious_rake"
+g_bundle_bin  = "#{bin_path}/bin/gitorious_bundle"
+g_gem_bin     = "#{bin_path}/bin/gitorious_gem"
 
 node[:webapp][:users][:git] = { :deploy_keys => [] }
+# node.set[:stompserver][:rvm_ruby] = select_ruby(rvm_ruby) + "@stompserver"
 
 rvm_gemset rvm_ruby
 
@@ -78,6 +79,7 @@ Gem.clear_paths
 require 'mysql'
 
 include_recipe "imagemagick"
+# include_recipe "stompserver"
 include_recipe "activemq"
 
 configure_activemq = lambda do
@@ -174,7 +176,7 @@ template "/etc/mysql/gitorious-grants.sql" do
   notifies :run, "execute[install_gitorious_mysql_privileges]", :immediately
 end
 
-%w{ system pids }.each do |dir|
+%w{ system pids patches }.each do |dir|
   directory ::File.join(shared_path, dir) do
     owner       app_user
     group       app_user
@@ -216,12 +218,6 @@ rvm_shell "trust_rvmrc" do
   code        %{rvm rvmrc trust #{current_path}}
 end
 
-# Gitorious is vendored with Rails 2.3.5 which is not compatible with newer RubyGems
-rvm_shell "set_rubygems_version" do
-  ruby_string rvm_ruby
-  code        %{gem --version | grep 1.5.2 || rvm rubygems 1.5.2}
-end
-
 %w{ post-receive pre-receive }.each do |hook|
   execute "fix_#{hook}_hooks_shebangs" do
     cwd         ::File.join(current_path, "data", "hooks")
@@ -233,6 +229,12 @@ end
         #{::File.join(current_path, "data", "hooks", hook)}
     NOTIF
   end
+end
+
+# Gitorious is vendored with Rails 2.3.5 which is not compatible with newer RubyGems
+rvm_shell "set_rubygems_version" do
+  ruby_string rvm_ruby
+  code        %{gem --version | grep 1.5.2 || rvm rubygems 1.5.2}
 end
 
 execute "gitorious_bundle" do
@@ -414,7 +416,7 @@ execute "migrate_gitorious_database" do
   cwd         current_path
   user        app_user
   group       app_user
-  command     "#{g_rake_bin} RAILS_ENV=#{rails_env} db:reset"
+  command     "#{g_rake_bin} RAILS_ENV=#{rails_env} db:setup"
   notifies    :run, "execute[restart_gitorious_webapp]"
   not_if do
     m = Mysql.new(db_host, db_username, db_password)
