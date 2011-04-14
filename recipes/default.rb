@@ -41,14 +41,14 @@ db_host       = node[:gitorious][:db][:host]
 db_database   = node[:gitorious][:db][:database]
 db_username   = node[:gitorious][:db][:user]
 db_password   = node[:gitorious][:db][:password]
-bin_path      = ::File.dirname(node[:rvm][:root_path])
+bin_path      = node[:rvm][:root_path]
 g_ruby_bin    = "#{bin_path}/bin/gitorious_ruby"
 g_rake_bin    = "#{bin_path}/bin/gitorious_rake"
 g_bundle_bin  = "#{bin_path}/bin/gitorious_bundle"
 g_gem_bin     = "#{bin_path}/bin/gitorious_gem"
 
 node[:webapp][:users][:git] = { :deploy_keys => [] }
-# node.set[:stompserver][:rvm_ruby] = select_ruby(rvm_ruby) + "@stompserver"
+node.set[:stompserver][:rvm_ruby] = select_ruby(rvm_ruby) + "@stompserver"
 
 rvm_gemset rvm_ruby
 
@@ -79,18 +79,18 @@ Gem.clear_paths
 require 'mysql'
 
 include_recipe "imagemagick"
-# include_recipe "stompserver"
-include_recipe "activemq"
+include_recipe "stompserver"
+# include_recipe "activemq"
 
-configure_activemq = lambda do
-  activemq_xml_fn = Dir['/opt/apache-activemq*/conf/activemq.xml'][0]
-  unless (activemq_xml = IO.read(activemq_xml_fn)) =~ /stomp/
-    # uses Stomp connector (port 61613) used by Gitorious instead of default openwire (61616)
-    activemq_xml.sub!(/^(\s*)(.*openwire.*61616.*)$/, "\\1<!-- \\2 -->\n\\1" + %q{<transportConnector name="stomp" uri="stomp://localhost:61613"/>})
-    file(activemq_xml_fn) { content activemq_xml }
-  end
-end
-ruby_block("Configure ActiveMQ Stomp Server") { block { configure_activemq.call } }
+# configure_activemq = lambda do
+#   activemq_xml_fn = Dir['/opt/apache-activemq*/conf/activemq.xml'][0]
+#   unless (activemq_xml = IO.read(activemq_xml_fn)) =~ /stomp/
+#     # uses Stomp connector (port 61613) used by Gitorious instead of default openwire (61616)
+#     activemq_xml.sub!(/^(\s*)(.*openwire.*61616.*)$/, "\\1<!-- \\2 -->\n\\1" + %q{<transportConnector name="stomp" uri="stomp://localhost:61613"/>})
+#     file(activemq_xml_fn) { content activemq_xml }
+#   end
+# end
+# ruby_block("Configure ActiveMQ Stomp Server") { block { configure_activemq.call } }
 
 package "ssh"
 package "sphinxsearch"
