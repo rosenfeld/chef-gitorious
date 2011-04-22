@@ -416,7 +416,9 @@ execute "migrate_gitorious_database" do
   cwd         current_path
   user        app_user
   group       app_user
-  command     "#{g_rake_bin} RAILS_ENV=#{rails_env} db:setup"
+  # call db:migrate while Gitorious doesn't move the initial data to db/seeds.rb
+  # command     "#{g_rake_bin} RAILS_ENV=#{rails_env} db:setup"
+  command     "#{g_rake_bin} RAILS_ENV=#{rails_env} db:migrate"
   notifies    :run, "execute[restart_gitorious_webapp]"
   not_if do
     m = Mysql.new(db_host, db_username, db_password)
